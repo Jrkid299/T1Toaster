@@ -4,6 +4,7 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
 	"github.com/lib/pq"
@@ -77,7 +78,44 @@ func (m ToastModel) Insert(toast *Toast) error {
 
 // Get() allows us to retrieve a specific toast
 func (m ToastModel) Get(id int64) (*Toast, error) {
-	return nil, nil
+	// Ensure that there is a valid id
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	// Create the query
+	query := `
+		SELECT id, created_at, name, level, contact, phone, email, website, address, mode, version
+		FROM toasts
+		WHERE id = $1
+	`
+	// Declare a Toast variable to hold the returned data
+	var toast Toast
+	// Execute the query using QueryRow()
+	err := m.DB.QueryRow(query, id).Scan(
+		&toast.ID,
+		&toast.CreatedAt,
+		&toast.Name,
+		&toast.Level,
+		&toast.Contact,
+		&toast.Phone,
+		&toast.Email,
+		&toast.Website,
+		&toast.Address,
+		pq.Array(&toast.Mode),
+		&toast.Version,
+	)
+	// Handle any errors
+	if err != nil {
+		// Check the type of error
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+	// Success
+	return &toast, nil
 }
 
 // Update() allows us to edit/alter a specific toast

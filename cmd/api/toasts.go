@@ -3,9 +3,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"toaster.jalen.net/internals/data"
 	"toaster.jalen.net/internals/validator"
@@ -76,19 +76,19 @@ func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Create a new instance of the toast struct containing the ID we extracted
-	// from our URL and some sample data
-	toast := data.Toast{
-		ID:        id,
-		CreatedAt: time.Now(),
-		Name:      "Toast",
-		Level:     "High toast",
-		Contact:   "Jalen Lamb",
-		Phone:     "615-7940",
-		Address:   "20 Bahamas Street",
-		Mode:      []string{"blended", "online"},
-		Version:   1,
+	// Fetch the specific toast
+	toast, err := app.models.Toasts.Get(id)
+	// Handle errors
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.notFoundResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
+		return
 	}
+	// Write the data returned by Get()
 	err = app.writeJSON(w, http.StatusOK, envelope{"toast": toast}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
