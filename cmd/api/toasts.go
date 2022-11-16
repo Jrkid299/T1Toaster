@@ -96,7 +96,7 @@ func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (app *application) updateToastHandler(w http.ResponseWriter, r *http.Request) {
-	// This method does a complete replacement
+	// This method does a partial replacement
 	// Get the id for the toast that needs updating
 	id, err := app.readIDParam(r)
 	if err != nil {
@@ -115,15 +115,18 @@ func (app *application) updateToastHandler(w http.ResponseWriter, r *http.Reques
 		}
 		return
 	}
-	// Create an input struct to hold data read in fro mteh client
+	// Create an input struct to hold data read in from the client
+	// We update input struct to use pointers because pointers have a
+	// default value of nil
+	// If a field remains nil then we know that the client did not update it
 	var input struct {
-		Name    string   `json:"name"`
-		Level   string   `json:"level"`
-		Contact string   `json:"contact"`
-		Phone   string   `json:"phone"`
-		Email   string   `json:"email"`
-		Website string   `json:"website"`
-		Address string   `json:"address"`
+		Name    *string  `json:"name"`
+		Level   *string  `json:"level"`
+		Contact *string  `json:"contact"`
+		Phone   *string  `json:"phone"`
+		Email   *string  `json:"email"`
+		Website *string  `json:"website"`
+		Address *string  `json:"address"`
 		Mode    []string `json:"mode"`
 	}
 
@@ -134,16 +137,31 @@ func (app *application) updateToastHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Copy / Update the fields / values in the toast variable using the fields
-	// in the input struct
-	toast.Name = input.Name
-	toast.Level = input.Level
-	toast.Contact = input.Contact
-	toast.Phone = input.Phone
-	toast.Email = input.Email
-	toast.Website = input.Website
-	toast.Address = input.Address
-	toast.Mode = input.Mode
+	// Check for updates
+	if input.Name != nil {
+		toast.Name = *input.Name
+	}
+	if input.Level != nil {
+		toast.Level = *input.Level
+	}
+	if input.Contact != nil {
+		toast.Contact = *input.Contact
+	}
+	if input.Phone != nil {
+		toast.Phone = *input.Phone
+	}
+	if input.Email != nil {
+		toast.Email = *input.Email
+	}
+	if input.Website != nil {
+		toast.Website = *input.Website
+	}
+	if input.Address != nil {
+		toast.Address = *input.Address
+	}
+	if input.Mode != nil {
+		toast.Mode = input.Mode
+	}
 	// Perform validation on the updated Toast. If validation fails, then
 	// we send a 422 - Unprocessable Entity respose to the client
 	// Initialize a new Validator instance
@@ -192,4 +210,5 @@ func (app *application) deleteToastHandler(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
+
 }
