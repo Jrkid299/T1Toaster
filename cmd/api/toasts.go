@@ -3,7 +3,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -25,9 +24,9 @@ func (app *application) createToastHandler(w http.ResponseWriter, r *http.Reques
 		Mode    []string `json:"mode"`
 	}
 	// Initialize a new json.Decoder instance
-	err := json.NewDecoder(r.Body).Decode(&input)
+	err := app.readJSON(w, r, &input)
 	if err != nil {
-		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
+		app.badRequestResponse(w, r, err)
 		return
 	}
 	// Display the request
@@ -49,9 +48,9 @@ func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request)
 		CreatedAt: time.Now(),
 		Name:      "Toast",
 		Level:     "High School",
-		Contact:   "Anna Smith",
-		Phone:     "601-4411",
-		Address:   "14 Apple street",
+		Contact:   "Jalen Lamb",
+		Phone:     "615-7940",
+		Address:   "20 Bahamas Street",
 		Mode:      []string{"blended", "online"},
 		Version:   1,
 	}
