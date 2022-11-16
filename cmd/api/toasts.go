@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"toaster.jalen.net/internals/data"
+	"toaster.jalen.net/internals/validator"
 )
 
 // createToastHandler for the "POST /v1/toasts" endpoint
@@ -29,6 +30,28 @@ func (app *application) createToastHandler(w http.ResponseWriter, r *http.Reques
 		app.badRequestResponse(w, r, err)
 		return
 	}
+
+	// Copy the values from the input struct to a new School struct
+	toast := &data.Toast{
+		Name:    input.Name,
+		Level:   input.Level,
+		Contact: input.Contact,
+		Phone:   input.Phone,
+		Email:   input.Email,
+		Website: input.Website,
+		Address: input.Address,
+		Mode:    input.Mode,
+	}
+
+	// Initialize a new Validator instance
+	v := validator.New()
+
+	// Check the map to determine if there were any validation errors
+	if data.ValidateToast(v, toast); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	// Display the request
 	fmt.Fprintf(w, "%+v\n", input)
 }
