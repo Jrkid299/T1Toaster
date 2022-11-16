@@ -31,7 +31,7 @@ func (app *application) createToastHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Copy the values from the input struct to a new School struct
+	// Copy the values from the input struct to a new toast struct
 	toast := &data.Toast{
 		Name:    input.Name,
 		Level:   input.Level,
@@ -52,8 +52,20 @@ func (app *application) createToastHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Display the request
-	fmt.Fprintf(w, "%+v\n", input)
+	// Create a toast
+	err = app.models.Toasts.Insert(toast)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
+	// Create a Location header for the newly created resource/toast
+	headers := make(http.Header)
+	headers.Set("Location", fmt.Sprintf("/v1/toasts/%d", toast.ID))
+	// Write the JSON response with 201 - Created status code with the body
+	// being the toast data and the header being the headers map
+	err = app.writeJSON(w, http.StatusCreated, envelope{"toast": toast}, headers)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 // showToastHandler for the "GET /v1/toasts/:id" endpoint
@@ -64,13 +76,13 @@ func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Create a new instance of the School struct containing the ID we extracted
+	// Create a new instance of the toast struct containing the ID we extracted
 	// from our URL and some sample data
 	toast := data.Toast{
 		ID:        id,
 		CreatedAt: time.Now(),
 		Name:      "Toast",
-		Level:     "High School",
+		Level:     "High toast",
 		Contact:   "Jalen Lamb",
 		Phone:     "615-7940",
 		Address:   "20 Bahamas Street",

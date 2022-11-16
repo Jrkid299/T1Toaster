@@ -3,8 +3,10 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
+	"github.com/lib/pq"
 	"toaster.jalen.net/internals/validator"
 )
 
@@ -49,4 +51,41 @@ func ValidateToast(v *validator.Validator, toast *Toast) {
 	v.Check(len(toast.Mode) >= 1, "mode", "must contain at least 1 entry")
 	v.Check(len(toast.Mode) <= 5, "mode", "must contain at most 5 entries")
 	v.Check(validator.Unique(toast.Mode), "mode", "must not contain duplicate entries")
+}
+
+// Define a ToastModel which wraps a sql.DB connection pool
+type ToastModel struct {
+	DB *sql.DB
+}
+
+// Insert() allows us  to create a new toast
+func (m ToastModel) Insert(toast *Toast) error {
+	query := `
+		INSERT INTO toasts (name, level, contact, phone, email, website, address, mode)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, created_at, version
+	`
+	// Collect the data fields into a slice
+	args := []interface{}{
+		toast.Name, toast.Level,
+		toast.Contact, toast.Phone,
+		toast.Email, toast.Website,
+		toast.Address, pq.Array(toast.Mode),
+	}
+	return m.DB.QueryRow(query, args...).Scan(&toast.ID, &toast.CreatedAt, &toast.Version)
+}
+
+// Get() allows us to retrieve a specific toast
+func (m ToastModel) Get(id int64) (*Toast, error) {
+	return nil, nil
+}
+
+// Update() allows us to edit/alter a specific toast
+func (m ToastModel) Update(toast *Toast) error {
+	return nil
+}
+
+// Delete() removes a specific toast
+func (m ToastModel) Delete(id int64) error {
+	return nil
 }
