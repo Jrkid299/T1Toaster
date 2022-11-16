@@ -120,7 +120,27 @@ func (m ToastModel) Get(id int64) (*Toast, error) {
 
 // Update() allows us to edit/alter a specific toast
 func (m ToastModel) Update(toast *Toast) error {
-	return nil
+	// Create a query
+	query := `
+		UPDATE toasts
+		SET name = $1, level = $2, contact = $3,
+		    phone = $4, email = $5, website = $6,
+			address = $7, mode = $8, version = version + 1
+		WHERE id = $9
+		RETURNING version
+	`
+	args := []interface{}{
+		toast.Name,
+		toast.Level,
+		toast.Contact,
+		toast.Phone,
+		toast.Email,
+		toast.Website,
+		toast.Address,
+		pq.Array(toast.Mode),
+		toast.ID,
+	}
+	return m.DB.QueryRow(query, args...).Scan(&toast.Version)
 }
 
 // Delete() removes a specific toast
