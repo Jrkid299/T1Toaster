@@ -175,7 +175,12 @@ func (app *application) updateToastHandler(w http.ResponseWriter, r *http.Reques
 	// Pass the updated Toast record to the Update() method
 	err = app.models.Toasts.Update(toast)
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
+		switch {
+		case errors.Is(err, data.ErrEditConflict):
+			app.editConflictResponse(w, r)
+		default:
+			app.serverErrorResponse(w, r, err)
+		}
 		return
 	}
 	// Write the data returned by Get()

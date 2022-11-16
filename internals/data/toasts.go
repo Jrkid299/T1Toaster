@@ -119,6 +119,7 @@ func (m ToastModel) Get(id int64) (*Toast, error) {
 }
 
 // Update() allows us to edit/alter a specific toast
+// Optimistic locking (version number)
 func (m ToastModel) Update(toast *Toast) error {
 	// Create a query
 	query := `
@@ -127,6 +128,7 @@ func (m ToastModel) Update(toast *Toast) error {
 		    phone = $4, email = $5, website = $6,
 			address = $7, mode = $8, version = version + 1
 		WHERE id = $9
+		AND version = $10
 		RETURNING version
 	`
 	args := []interface{}{
@@ -139,8 +141,19 @@ func (m ToastModel) Update(toast *Toast) error {
 		toast.Address,
 		pq.Array(toast.Mode),
 		toast.ID,
+		toast.Version,
 	}
-	return m.DB.QueryRow(query, args...).Scan(&toast.Version)
+	// Check for edit conflicts
+	err := m.DB.QueryRow(query, args...).Scan(&toast.Version)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrEditConflict
+		default:
+			return err
+		}
+	}
+	return nil
 }
 
 // Delete() removes a specific toast
