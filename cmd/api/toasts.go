@@ -5,6 +5,9 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
+
+	"toaster.jalen.net/internals/data"
 )
 
 // createToastHandler for the "POST /v1/toasts" endpoint
@@ -19,6 +22,23 @@ func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request)
 		http.NotFound(w, r)
 		return
 	}
-	// Display the toasts id
-	fmt.Fprintf(w, "show the details for toast %d\n", id)
+
+	// Create a new instance of the School struct containing the ID we extracted
+	// from our URL and some sample data
+	toast := data.Toast{
+		ID:        id,
+		CreatedAt: time.Now(),
+		Name:      "Toast",
+		Level:     "High School",
+		Contact:   "Anna Smith",
+		Phone:     "601-4411",
+		Address:   "14 Apple street",
+		Mode:      []string{"blended", "online"},
+		Version:   1,
+	}
+	err = app.writeJSON(w, http.StatusOK, toast, nil)
+	if err != nil {
+		app.logger.Println(err)
+		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+	}
 }
