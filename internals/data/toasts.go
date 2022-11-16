@@ -67,10 +67,6 @@ func (m ToastModel) Insert(toast *Toast) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, version
 	`
-	// Create a context
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// Cleanup to prevent memory leaks
-	defer cancel()
 	// Collect the data fields into a slice
 	args := []interface{}{
 		toast.Name, toast.Level,
@@ -78,6 +74,10 @@ func (m ToastModel) Insert(toast *Toast) error {
 		toast.Email, toast.Website,
 		toast.Address, pq.Array(toast.Mode),
 	}
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	return m.DB.QueryRowContext(ctx, query, args...).Scan(&toast.ID, &toast.CreatedAt, &toast.Version)
 }
 
@@ -140,10 +140,7 @@ func (m ToastModel) Update(toast *Toast) error {
 		AND version = $10
 		RETURNING version
 	`
-	// Create a context
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// Cleanup to prevent memory leaks
-	defer cancel()
+
 	args := []interface{}{
 		toast.Name,
 		toast.Level,
@@ -156,6 +153,10 @@ func (m ToastModel) Update(toast *Toast) error {
 		toast.ID,
 		toast.Version,
 	}
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	// Check for edit conflicts
 	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&toast.Version)
 	if err != nil {
