@@ -3,6 +3,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -12,14 +13,32 @@ import (
 
 // createToastHandler for the "POST /v1/toasts" endpoint
 func (app *application) createToastHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "create a new toast..")
+	// Our target decode destination
+	var input struct {
+		Name    string   `json:"name"`
+		Level   string   `json:"level"`
+		Contact string   `json:"contact"`
+		Phone   string   `json:"phone"`
+		Email   string   `json:"email"`
+		Website string   `json:"website"`
+		Address string   `json:"address"`
+		Mode    []string `json:"mode"`
+	}
+	// Initialize a new json.Decoder instance
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
+		return
+	}
+	// Display the request
+	fmt.Fprintf(w, "%+v\n", input)
 }
 
 // showToastHandler for the "GET /v1/toasts/:id" endpoint
 func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
-		http.NotFound(w, r)
+		app.notFoundResponse(w, r)
 		return
 	}
 
@@ -36,9 +55,8 @@ func (app *application) showToastHandler(w http.ResponseWriter, r *http.Request)
 		Mode:      []string{"blended", "online"},
 		Version:   1,
 	}
-	err = app.writeJSON(w, http.StatusOK, toast, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"toast": toast}, nil)
 	if err != nil {
-		app.logger.Println(err)
-		http.Error(w, "The server encountered a problem and could not process your request", http.StatusInternalServerError)
+		app.serverErrorResponse(w, r, err)
 	}
 }
