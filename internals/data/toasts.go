@@ -3,6 +3,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
@@ -66,6 +67,10 @@ func (m ToastModel) Insert(toast *Toast) error {
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at, version
 	`
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	// Collect the data fields into a slice
 	args := []interface{}{
 		toast.Name, toast.Level,
@@ -73,7 +78,7 @@ func (m ToastModel) Insert(toast *Toast) error {
 		toast.Email, toast.Website,
 		toast.Address, pq.Array(toast.Mode),
 	}
-	return m.DB.QueryRow(query, args...).Scan(&toast.ID, &toast.CreatedAt, &toast.Version)
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&toast.ID, &toast.CreatedAt, &toast.Version)
 }
 
 // Get() allows us to retrieve a specific toast
@@ -90,8 +95,12 @@ func (m ToastModel) Get(id int64) (*Toast, error) {
 	`
 	// Declare a Toast variable to hold the returned data
 	var toast Toast
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	// Execute the query using QueryRow()
-	err := m.DB.QueryRow(query, id).Scan(
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(
 		&toast.ID,
 		&toast.CreatedAt,
 		&toast.Name,
@@ -131,6 +140,10 @@ func (m ToastModel) Update(toast *Toast) error {
 		AND version = $10
 		RETURNING version
 	`
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	args := []interface{}{
 		toast.Name,
 		toast.Level,
@@ -144,7 +157,7 @@ func (m ToastModel) Update(toast *Toast) error {
 		toast.Version,
 	}
 	// Check for edit conflicts
-	err := m.DB.QueryRow(query, args...).Scan(&toast.Version)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&toast.Version)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -167,8 +180,12 @@ func (m ToastModel) Delete(id int64) error {
 			DELETE FROM toasts
 			WHERE id = $1
 		`
+	// Create a context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	// Cleanup to prevent memory leaks
+	defer cancel()
 	// Execute the query
-	result, err := m.DB.Exec(query, id)
+	result, err := m.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
