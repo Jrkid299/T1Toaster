@@ -218,7 +218,7 @@ func (app *application) deleteToastHandler(w http.ResponseWriter, r *http.Reques
 
 }
 
-// The listSchoolsHandler() allows the client to see a listing of toasts
+// The listToastsHandler() allows the client to see a listing of toasts
 // based on a set of criteria
 func (app *application) listToastsHandler(w http.ResponseWriter, r *http.Request) {
 	// Create an input struct to hold our query parameters
@@ -248,6 +248,16 @@ func (app *application) listToastsHandler(w http.ResponseWriter, r *http.Request
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}
-	// Results dump
-	fmt.Fprintf(w, "%+v\n", input)
+	// Get a listing of all toasts
+	toasts, err := app.models.Toasts.GetAll(input.Name, input.Level, input.Mode, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+	// Send a JSON response containg all the toasts
+	err = app.writeJSON(w, http.StatusOK, envelope{"toasts": toasts}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
 }

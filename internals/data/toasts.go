@@ -140,7 +140,6 @@ func (m ToastModel) Update(toast *Toast) error {
 		AND version = $10
 		RETURNING version
 	`
-
 	args := []interface{}{
 		toast.Name,
 		toast.Level,
@@ -201,4 +200,60 @@ func (m ToastModel) Delete(id int64) error {
 		return ErrRecordNotFound
 	}
 	return nil
+}
+
+// The GetAll() method retuns a list of all the toasts sorted by id
+func (m ToastModel) GetAll(name string, level string, mode []string, filters Filters) ([]*Toast, error) {
+	// Construct the query
+	query := `
+		SELECT id, created_at, name, level,
+		       contact, phone, email, website,
+			   address, mode, version
+		FROM toasts
+		WHERE (LOWER(name) = LOWER($1) OR $1 = '')
+		AND (LOWER(level) = LOWER($2) OR $2 = '')
+		AND (mode @> $3 OR $3 = '{}' )
+		ORDER BY id
+	`
+	// Create a 3-second-timout context
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	// Execute the query
+	rows, err := m.DB.QueryContext(ctx, query, name, level, pq.Array(mode))
+	if err != nil {
+		return nil, err
+	}
+	// Close the resultset
+	defer rows.Close()
+	// Initialize an empty slice to hold the Toast data
+	toasts := []*Toast{}
+	// Iterate over the rows in the resultset
+	for rows.Next() {
+		var toast Toast
+		// Scan the values from the row into toast
+		err := rows.Scan(
+			&toast.ID,
+			&toast.CreatedAt,
+			&toast.Name,
+			&toast.Level,
+			&toast.Contact,
+			&toast.Phone,
+			&toast.Email,
+			&toast.Website,
+			&toast.Address,
+			pq.Array(&toast.Mode),
+			&toast.Version,
+		)
+		if err != nil {
+			return nil, err
+		}
+		// Add the Toast to our slice
+		toasts = append(toasts, &toast)
+	}
+	// Check for errors after looping through the resultset
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	// Return the slice of Toasts
+	return toasts, nil
 }
