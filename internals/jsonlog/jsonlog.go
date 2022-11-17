@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// We can have different severity levels of loggimg entries
+// We can have different severity levels of logging entries
 type Level int8
 
 // Levels start at zero
