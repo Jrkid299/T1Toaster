@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lib/pq"
@@ -203,28 +204,31 @@ func (m ToastModel) Delete(id int64) error {
 }
 
 // The GetAll() method retuns a list of all the toasts sorted by id
-func (m ToastModel) GetAll(name string, level string, mode []string, filters Filters) ([]*Toast, error) {
+func (m ToastModel) GetAll(name string, level string, mode []string, filters Filters) ([]*Toast, Metadata, error) {
 	// Construct the query
-	query := `
-		SELECT id, created_at, name, level,
+	query := fmt.Sprintf(`
+		SELECT COUNT(*) OVER(), id, created_at, name, level,
 		       contact, phone, email, website,
 			   address, mode, version
 		FROM toasts
 		WHERE (to_tsvector('simple', name) @@ plainto_tsquery('simple', $1) OR $1 = '')
 		AND (to_tsvector('simple', level) @@ plainto_tsquery('simple', $2) OR $2 = '')
 		AND (mode @> $3 OR $3 = '{}' )
-		ORDER BY id
-	`
+		ORDER BY %s %s, id ASC
+		LIMIT $4 OFFSET $5`, filters.sortColumn(), filters.sortOrder())
+
 	// Create a 3-second-timout context
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	// Execute the query
-	rows, err := m.DB.QueryContext(ctx, query, name, level, pq.Array(mode))
+	args := []interface{}{name, level, pq.Array(mode), filters.limit(), filters.offset()}
+	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 	// Close the resultset
 	defer rows.Close()
+	totalRecords := 0
 	// Initialize an empty slice to hold the Toast data
 	toasts := []*Toast{}
 	// Iterate over the rows in the resultset
@@ -232,6 +236,7 @@ func (m ToastModel) GetAll(name string, level string, mode []string, filters Fil
 		var toast Toast
 		// Scan the values from the row into toast
 		err := rows.Scan(
+			&totalRecords,
 			&toast.ID,
 			&toast.CreatedAt,
 			&toast.Name,
@@ -245,15 +250,15 @@ func (m ToastModel) GetAll(name string, level string, mode []string, filters Fil
 			&toast.Version,
 		)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 		// Add the Toast to our slice
 		toasts = append(toasts, &toast)
 	}
 	// Check for errors after looping through the resultset
 	if err = rows.Err(); err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 	// Return the slice of Toasts
-	return toasts, nil
+	return nil, Metadata{}, err
 }

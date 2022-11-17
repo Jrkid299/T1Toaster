@@ -249,13 +249,13 @@ func (app *application) listToastsHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 	// Get a listing of all toasts
-	toasts, err := app.models.Toasts.GetAll(input.Name, input.Level, input.Mode, input.Filters)
+	toasts, metadata, err := app.models.Toasts.GetAll(input.Name, input.Level, input.Mode, input.Filters)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
 	}
 	// Send a JSON response containg all the toasts
-	err = app.writeJSON(w, http.StatusOK, envelope{"toasts": toasts}, nil)
+	err = app.writeJSON(w, http.StatusOK, envelope{"toasts": toasts, "metadata": metadata}, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 		return
