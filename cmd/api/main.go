@@ -13,6 +13,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"toaster.jalen.net/internals/data"
+	"toaster.jalen.net/internals/jsonlog"
 )
 
 // The application version number
@@ -33,7 +34,7 @@ type config struct {
 // Dependency Injection
 type application struct {
 	config config
-	logger *log.Logger
+	logger *jsonlog.Logger
 	models data.Models
 }
 
@@ -48,16 +49,16 @@ func main() {
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m", "PostgreSQL max connection idle time")
 	flag.Parse()
 	// Create a logger
-	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
+	logger := jsonlog.New(os.Stdout, jsonlog.LevelInfo)
 	// Create the connection pool
 	db, err := openDB(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		logger.PrintFatal(err, nil)
 	}
 
 	defer db.Close()
 	// Log the successful connection pool
-	logger.Println("database connection pool established")
+	logger.PrintInfo("database connection pool established", nil)
 	// Create an instance of our application struct
 	app := &application{
 		config: cfg,
@@ -71,14 +72,18 @@ func main() {
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
 		Handler:      app.routes(),
+		ErrorLog:     log.New(logger, "", 0),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 	// Start our server
-	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
+	logger.PrintInfo("starting server", map[string]string{
+		"addr": srv.Addr,
+		"env":  cfg.env,
+	})
 	err = srv.ListenAndServe()
-	logger.Fatal(err)
+	logger.PrintFatal(err, nil)
 }
 
 // The openDB() function returns a *sql.DB connection pool

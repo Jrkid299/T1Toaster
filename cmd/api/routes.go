@@ -8,7 +8,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (app *application) routes() *httprouter.Router {
+func (app *application) routes() http.Handler {
 	// Create a new httprouter router instance
 	router := httprouter.New()
 	router.NotFound = http.HandlerFunc(app.notFoundResponse)
@@ -20,5 +20,5 @@ func (app *application) routes() *httprouter.Router {
 	router.HandlerFunc(http.MethodPatch, "/v1/toasts/:id", app.updateToastHandler)
 	router.HandlerFunc(http.MethodDelete, "/v1/toasts/:id", app.deleteToastHandler)
 
-	return router
+	return app.recoverPanic(router)
 }
