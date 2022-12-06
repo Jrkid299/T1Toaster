@@ -67,3 +67,9 @@ func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http
 	message := "rate limit exceeded"
 	app.errorResponse(w, r, http.StatusTooManyRequests, message)
 }
+
+// Invalid credentials
+func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
+	message := "invalid authentication credentials"
+	app.errorResponse(w, r, http.StatusUnauthorized, message)
+}
